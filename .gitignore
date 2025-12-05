@@ -1,0 +1,17 @@
+# Ignore all log files  
+*.log  
+
+# # Ignore all jar files
+# *.jar
+
+# Ignore a specific folder (often used for build outputs or temp files)  
+tmp/  
+build/  
+__pycache__/  
+
+
+# Ignore specific system files  
+.DS_Store  
+
+# Ignore environment config files (passwords/keys)  
+.env

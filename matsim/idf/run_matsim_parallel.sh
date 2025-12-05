@@ -1,27 +1,27 @@
 #!/usr/bin/env bash  
-# 并发运行 MATSim 配置的批处理脚本（安全增强版）  
-# 用法：  
+ # Concurrent batch script for running MATSim configs (enhanced safety version)
+# Usage:
 #   CONCURRENCY=5 JAVA_XMX=16G LOG_DIR=logs_v2 ENABLE_LOCK=1 AUTO_CONFIRM=0 \
-#   ./run_matsim_parallel.sh /path/to/run.jar /path/to/config_dir [MAIN_CLASS]  
-#  
-# 参数：  
-#   $1: JAR 路径（必填）  
-#   $2: 配置目录（必填，仅匹配 config_n.xml）  
-#   $3: 主类（可选，默认 org.eqasim.ile_de_france.RunSimulation）  
-#  
-# 环境变量：  
-#   CONCURRENCY  最大并发数（默认 2）  
-#   JAVA_XMX     每个 JVM 的最大堆（默认 8G），例如 16G  
-#   LOG_DIR      日志目录（默认 logs）  
-#   ENABLE_LOCK  是否启用互斥锁（1=启用，0=禁用，默认 1）  
-#   LOCK_DIR     锁目录（默认 /tmp/matsim_locks/<配置目录名>）  
-#   AUTO_CONFIRM 是否自动确认（1=继续，不询问；0=询问，默认 0）  
+#   ./run_matsim_parallel.sh /path/to/run.jar /path/to/config_dir [MAIN_CLASS]
+#
+# Arguments:
+#   $1: Path to JAR file (required)
+#   $2: Config directory (required, only matches config_n.xml)
+#   $3: Main class (optional, default: org.eqasim.ile_de_france.RunSimulation)
+#
+# Environment variables:
+#   CONCURRENCY  Maximum concurrency (default 2)
+#   JAVA_XMX     Max heap for each JVM (default 8G), e.g., 16G
+#   LOG_DIR      Log directory (default: logs)
+#   ENABLE_LOCK  Enable mutex lock (1=enable, 0=disable, default 1)
+#   LOCK_DIR     Lock directory (default: /tmp/matsim_locks/<config dir name>)
+#   AUTO_CONFIRM Auto confirm (1=continue, no prompt; 0=prompt, default 0)
 
 set -euo pipefail  
 
-#-----------------------------  
-# 参数与默认值  
-#-----------------------------  
+#-----------------------------
+# Arguments and default values
+#-----------------------------
 JAR_PATH="${1:-}"  
 CONFIGS_DIR="${2:-}"  
 MAIN_CLASS="${3:-org.eqasim.ile_de_france.RunSimulation}"  
@@ -32,12 +32,13 @@ LOG_DIR="${LOG_DIR:-logs}"
 ENABLE_LOCK="${ENABLE_LOCK:-1}"  
 AUTO_CONFIRM="${AUTO_CONFIRM:-0}"  
 
-# 锁目录默认包含配置目录名，避免跨批次同名 config 误冲突  
+# Lock directory defaults to include the config directory name to avoid
+# accidental conflicts between batches with the same config names
 LOCK_DIR="${LOCK_DIR:-/tmp/matsim_locks/$(basename "${CONFIGS_DIR:-configs}")}"  
 
-#-----------------------------  
-# 校验参数  
-#-----------------------------  
+#-----------------------------
+# Validate parameters
+#-----------------------------
 if [[ -z "$JAR_PATH" || -z "$CONFIGS_DIR" ]]; then  
   echo "Usage: $0 <JAR_PATH> <CONFIGS_DIR> [MAIN_CLASS]" >&2  
   exit 1  
@@ -56,9 +57,9 @@ fi
 mkdir -p "$LOG_DIR"  
 mkdir -p "$LOCK_DIR"  
 
-#-----------------------------  
-# 收集配置文件（仅匹配 config_n.xml；健壮处理）  
-#-----------------------------  
+#-----------------------------
+# Collect config files (only match config_n.xml; robust handling)
+#-----------------------------
 mapfile -d '' CONFIG_FILES < <(  
   find "$CONFIGS_DIR" -maxdepth 1 -type f \
     -regextype posix-extended -regex '.*/config_[0-9]+\.xml' \
@@ -71,14 +72,14 @@ if (( TOTAL == 0 )); then
   exit 0  
 fi  
 
-# 先打印 JAR 和主类信息  
-echo "JAR: $JAR_PATH"  
-echo "Main class: $MAIN_CLASS"  
-echo  
+# Print JAR and main class information
+echo "JAR: $JAR_PATH"
+echo "Main class: $MAIN_CLASS"
+echo
 
-#-----------------------------  
-# 打印清单并确认继续（增强安全）  
-#-----------------------------  
+#-----------------------------
+# Print list and confirm to continue (safety enhanced)
+#-----------------------------
 echo "Found $TOTAL configuration files to run (pattern: config_n.xml):"  
 idx=1  
 for cfg in "${CONFIG_FILES[@]}"; do  
@@ -105,17 +106,17 @@ fi
 echo "Total $TOTAL configs; concurrency: $CONCURRENCY; log dir: $LOG_DIR"  
 echo  
 
-#-----------------------------  
-# 工具函数：检测是否支持 wait -n  
-#-----------------------------  
+#-----------------------------
+# Helper: detect if `wait -n` is supported
+#-----------------------------
 supports_wait_n=1  
 if ! ( help wait 2>&1 | grep -q -- 'wait:.*-n' ); then  
   supports_wait_n=0  
 fi  
 
-#-----------------------------  
-# 单任务执行函数  
-#-----------------------------  
+#-----------------------------
+# Single-task runner function
+#-----------------------------
 run_one() {  
   local cfg="$1"  
   local base ts log rc jpid  
@@ -162,9 +163,9 @@ run_one() {
   return $rc  
 }  
 
-#-----------------------------  
-# 并发调度  
-#-----------------------------  
+#-----------------------------
+# Concurrency scheduler
+#-----------------------------
 set +e  
 
 running=0  

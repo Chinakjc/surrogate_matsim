@@ -1,33 +1,33 @@
 #!/usr/bin/env bash  
-# 并发运行柏林 MATSim 配置的批处理脚本（安全增强版）  
-# 用法：  
+# Concurrent batch script for running Berlin MATSim configs (enhanced safety version)
+# Usage:
 #   CONCURRENCY=5 JAVA_XMX=16G LOG_DIR=logs_berlin ENABLE_LOCK=1 AUTO_CONFIRM=0 \
 #   OUTPUT_BASE=/output NETWORK_FILE=/network.xml \
-#   ./run_matsim_berlin_parallel.sh /path/to/berlin.jar /path/to/config_dir  
-#  
-# 参数：  
-#   $1: JAR 路径（必填）  
-#   $2: 配置目录（必填，仅匹配 config_n.xml）  
-#  
-# 环境变量：  
-#   CONCURRENCY          最大并发数（默认 2）  
-#   JAVA_XMX             每个 JVM 的最大堆（默认 8G），例如 16G  
-#   LOG_DIR              日志目录（默认 logs）  
-#   ENABLE_LOCK          是否启用互斥锁（1=启用，0=禁用，默认 1）  
-#   LOCK_DIR             锁目录（默认 /tmp/matsim_locks/<配置目录名>）  
-#   AUTO_CONFIRM         是否自动确认（1=继续，不询问；0=询问，默认 0）  
-#   
-#   柏林 MATSim 特定选项（可选，用于覆盖配置文件）：  
-#   NETWORK_FILE         网络文件路径（覆盖 config 中的 network.inputFile）  
-#   OUTPUT_BASE          输出目录基础路径（会为每个配置自动添加后缀）  
-#   LINKSTATS_INTERVAL   linkStats 写入间隔  
-#   LINKSTATS_AVERAGE    linkStats 平均迭代数  
+#   ./run_matsim_berlin_parallel.sh /path/to/berlin.jar /path/to/config_dir
+#
+# Arguments:
+#   $1: Path to JAR file (required)
+#   $2: Config directory (required, only matches config_n.xml)
+#
+# Environment variables:
+#   CONCURRENCY          Maximum concurrency (default 2)
+#   JAVA_XMX             Max heap for each JVM (default 8G), e.g., 16G
+#   LOG_DIR              Log directory (default: logs)
+#   ENABLE_LOCK          Enable mutex lock (1=enable, 0=disable, default 1)
+#   LOCK_DIR             Lock directory (default: /tmp/matsim_locks/<config dir name>)
+#   AUTO_CONFIRM         Auto confirm (1=continue, no prompt; 0=prompt, default 0)
+#
+#   Berlin MATSim specific options (optional, to override config file):
+#   NETWORK_FILE         Network file path (overrides network.inputFile in config)
+#   OUTPUT_BASE          Output base directory (suffix will be added for each config)
+#   LINKSTATS_INTERVAL   linkStats write interval
+#   LINKSTATS_AVERAGE    linkStats average iteration count
 
 set -euo pipefail  
 
-#-----------------------------  
-# 参数与默认值  
-#-----------------------------  
+#-----------------------------
+# Arguments and default values
+#-----------------------------
 JAR_PATH="${1:-}"  
 CONFIGS_DIR="${2:-}"  
 MAIN_CLASS="org.matsim.project.RunMatsimCli"  
@@ -38,18 +38,19 @@ LOG_DIR="${LOG_DIR:-logs}"
 ENABLE_LOCK="${ENABLE_LOCK:-1}"  
 AUTO_CONFIRM="${AUTO_CONFIRM:-0}"  
 
-# 柏林 MATSim 特定选项  
-NETWORK_FILE="${NETWORK_FILE:-}"  
-OUTPUT_BASE="${OUTPUT_BASE:-}"  
-LINKSTATS_INTERVAL="${LINKSTATS_INTERVAL:-}"  
-LINKSTATS_AVERAGE="${LINKSTATS_AVERAGE:-}"  
+# Berlin MATSim specific options
+NETWORK_FILE="${NETWORK_FILE:-}"
+OUTPUT_BASE="${OUTPUT_BASE:-}"
+LINKSTATS_INTERVAL="${LINKSTATS_INTERVAL:-}"
+LINKSTATS_AVERAGE="${LINKSTATS_AVERAGE:-}"
 
-# 锁目录默认包含配置目录名，避免跨批次同名 config 误冲突  
-LOCK_DIR="${LOCK_DIR:-/tmp/matsim_locks/$(basename "${CONFIGS_DIR:-configs}")}"  
+# Lock directory defaults to include the config directory name to avoid
+# accidental conflicts between batches with the same config names
+LOCK_DIR="${LOCK_DIR:-/tmp/matsim_locks/$(basename "${CONFIGS_DIR:-configs}")}" 
 
-#-----------------------------  
-# 校验参数  
-#-----------------------------  
+#-----------------------------
+# Validate parameters
+#-----------------------------
 if [[ -z "$JAR_PATH" || -z "$CONFIGS_DIR" ]]; then  
   echo "Usage: $0 <JAR_PATH> <CONFIGS_DIR>" >&2  
   exit 1  
@@ -68,9 +69,9 @@ fi
 mkdir -p "$LOG_DIR"  
 mkdir -p "$LOCK_DIR"  
 
-#-----------------------------  
-# 收集配置文件（仅匹配 config_n.xml；健壮处理）  
-#-----------------------------  
+#-----------------------------
+# Collect config files (only match config_n.xml; robust handling)
+#-----------------------------
 mapfile -d '' CONFIG_FILES < <(  
   find "$CONFIGS_DIR" -maxdepth 1 -type f \
     -regextype posix-extended -regex '.*/config_[0-9]+\.xml' \
@@ -83,22 +84,22 @@ if (( TOTAL == 0 )); then
   exit 0  
 fi  
 
-# 先打印 JAR 和主类信息  
-echo "JAR: $JAR_PATH"  
-echo "Main class: $MAIN_CLASS"  
-echo  
+# Print JAR and main class information
+echo "JAR: $JAR_PATH"
+echo "Main class: $MAIN_CLASS"
+echo
 
-# 显示覆盖选项（如果设置了）  
-echo "Override options:"  
-[[ -n "$NETWORK_FILE" ]] && echo "  Network file (-n): $NETWORK_FILE"  
-[[ -n "$OUTPUT_BASE" ]] && echo "  Output base (-o): $OUTPUT_BASE (will append config ID)"  
-[[ -n "$LINKSTATS_INTERVAL" ]] && echo "  LinkStats interval: $LINKSTATS_INTERVAL"  
-[[ -n "$LINKSTATS_AVERAGE" ]] && echo "  LinkStats average: $LINKSTATS_AVERAGE"  
-echo  
+# Show override options (if set)
+echo "Override options:"
+[[ -n "$NETWORK_FILE" ]] && echo "  Network file (-n): $NETWORK_FILE"
+[[ -n "$OUTPUT_BASE" ]] && echo "  Output base (-o): $OUTPUT_BASE (will append config ID)"
+[[ -n "$LINKSTATS_INTERVAL" ]] && echo "  LinkStats interval: $LINKSTATS_INTERVAL"
+[[ -n "$LINKSTATS_AVERAGE" ]] && echo "  LinkStats average: $LINKSTATS_AVERAGE"
+echo
 
-#-----------------------------  
-# 打印清单并确认继续（增强安全）  
-#-----------------------------  
+#-----------------------------
+# Print list and confirm to continue (safety enhanced)
+#-----------------------------
 echo "Found $TOTAL configuration files to run (pattern: config_n.xml):"  
 idx=1  
 for cfg in "${CONFIG_FILES[@]}"; do  
@@ -125,17 +126,17 @@ fi
 echo "Total $TOTAL configs; concurrency: $CONCURRENCY; log dir: $LOG_DIR"  
 echo  
 
-#-----------------------------  
-# 工具函数：检测是否支持 wait -n  
-#-----------------------------  
+#-----------------------------
+# Helper: detect if `wait -n` is supported
+#-----------------------------
 supports_wait_n=1  
 if ! ( help wait 2>&1 | grep -q -- 'wait:.*-n' ); then  
   supports_wait_n=0  
 fi  
 
-#-----------------------------  
-# 单任务执行函数  
-#-----------------------------  
+#-----------------------------
+# Single-task runner function
+#-----------------------------
 run_one() {  
   local cfg="$1"  
   local base ts log rc jpid  
@@ -158,20 +159,20 @@ run_one() {
 
   echo "[$(date +%T)] Start: $base (runner PID $$) -> $log"  
 
-  # 构建 Java 命令参数（柏林 MATSim CLI 格式）  
+  # Build Java command arguments (Berlin MATSim CLI format)
   local java_args=()  
   java_args+=("-Xmx${JAVA_XMX}")  
   java_args+=("-cp" "$JAR_PATH")  
   java_args+=("$MAIN_CLASS")  
   java_args+=("-c" "$cfg")  
   
-  # 添加可选覆盖参数  
+  # Add optional override parameters
   if [[ -n "$NETWORK_FILE" ]]; then  
     java_args+=("-n" "$NETWORK_FILE")  
   fi  
   
   if [[ -n "$OUTPUT_BASE" ]]; then  
-    # 为每个配置创建独立的输出目录（使用 config_n 的 n 作为后缀）  
+    # Create a separate output directory per config (use the n from config_n as suffix)
     local config_id  
     config_id=$(echo "$base" | grep -oP 'config_\K[0-9]+')  
     java_args+=("-o" "${OUTPUT_BASE}_${config_id}")  
@@ -208,9 +209,9 @@ run_one() {
   return $rc  
 }  
 
-#-----------------------------  
-# 并发调度  
-#-----------------------------  
+#-----------------------------
+# Concurrency scheduler
+#-----------------------------
 set +e  
 
 running=0  
@@ -274,29 +275,29 @@ else
   echo  
   echo "All tasks completed. Logs are in: $LOG_DIR"  
 fi  
-# ```## 主要变化说明  
-
-# ### 1. **命令行参数适配**  
-# - 使用 `-c` 代替 `--config-path`  
-# - 主类固定为 `org.matsim.project.RunMatsimCli`  
-
-# ### 2. **新增环境变量**（用于覆盖配置文件）  
-# - `NETWORK_FILE`：网络文件路径（对应 `-n` 参数）  
-# - `OUTPUT_BASE`：输出目录基础路径（对应 `-o` 参数）  
-# - `LINKSTATS_INTERVAL`：linkStats 写入间隔  
-# - `LINKSTATS_AVERAGE`：linkStats 平均迭代数  
-
-# ### 3. **智能输出目录**  
-# 如果设置了 `OUTPUT_BASE=/output`，脚本会自动为每个配置创建独立目录：  
-# - `config_1.xml` → `/output_1`  
-# - `config_2.xml` → `/output_2`  
-# - `config_10.xml` → `/output_10`  
-
-# ## 使用示例  
-
-# ### 基础用法  
-# ```bash  
-# chmod +x run_matsim_berlin_parallel.sh  
-
-# # 最简单的用法（使用默认值）  
+# ```## Major changes
+#
+# ### 1. Command-line argument adaptations
+# - Use `-c` instead of `--config-path`
+# - Main class fixed to `org.matsim.project.RunMatsimCli`
+#
+# ### 2. New environment variables (to override config file)
+# - `NETWORK_FILE`: path to network file (corresponds to `-n`)
+# - `OUTPUT_BASE`: base path for output directories (corresponds to `-o`)
+# - `LINKSTATS_INTERVAL`: linkStats write interval
+# - `LINKSTATS_AVERAGE`: linkStats average iteration count
+#
+# ### 3. Smart output directories
+# If `OUTPUT_BASE=/output` is set, the script will automatically create separate directories per config:
+# - `config_1.xml` -> `/output_1`
+# - `config_2.xml` -> `/output_2`
+# - `config_10.xml` -> `/output_10`
+#
+# ## Examples
+#
+# ### Basic usage
+# ```bash
+# chmod +x run_matsim_berlin_parallel.sh
+#
+# # Simple usage (using defaults)
 # ./run_matsim_berlin_parallel.sh /path/to/berlin.jar /path/to/configs
